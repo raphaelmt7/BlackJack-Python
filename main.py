@@ -2,7 +2,6 @@ import random
 import tkinter as tk
 from PIL import Image, ImageTk
 
-# État de la partie
 paquet = []
 main_joueur = []
 main_croupier = []
@@ -10,7 +9,6 @@ partie_terminee = True
 message = "Bienvenue ! Cliquez sur Nouvelle Manche pour commencer."
 
 carte = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-# Initiales correspondant à tes fichiers .gif (c, h, d, s)
 couleurs_dict = {"Trefle": "c", "Coeur": "h", "Caraux": "d", "Piques": "s"}
 
 def creer_paquet():
@@ -148,7 +146,7 @@ label_mainjoueur.pack()
 label_message = tk.Label(app, text=message, font=("Arial", 14, "italic"), bg="darkgreen", fg="white")
 label_message.pack(pady=20)
 
-# Boutons
+# boutons
 cadre_boutons = tk.Frame(app, bg="darkgreen")
 cadre_boutons.pack(pady=10)
 
@@ -160,5 +158,5 @@ bouton_rester.grid(row=1, column=1, padx=5)
 
 
 
-
+# main
 app.mainloop()
