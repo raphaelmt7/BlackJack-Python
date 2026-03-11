@@ -1,190 +1,164 @@
 import random
 import tkinter as tk
+from PIL import Image, ImageTk
 
-# Etat de la partie (partagé entre les callbacks Tkinter)
+# État de la partie
 paquet = []
 main_joueur = []
 main_croupier = []
 partie_terminee = True
-message = "Bienvenue pour commencer cliquez sur nouvelle manche !"
-
+message = "Bienvenue ! Cliquez sur Nouvelle Manche pour commencer."
 
 carte = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-couleurs = ["Piques", "Coeur", "Caraux", "Trefle"]
+# Initiales correspondant à tes fichiers .gif (c, h, d, s)
+couleurs_dict = {"Trefle": "c", "Coeur": "h", "Caraux": "d", "Piques": "s"}
 
 def creer_paquet():
-    paquet = []
-    for couleur in couleurs:
+    nouveau_paquet = []
+    for couleur in couleurs_dict:
         for rang in carte:
-            paquet.append((rang, couleur))  # tuple (rang, couleur)
-    random.shuffle(paquet)
-    return paquet
+            nouveau_paquet.append((rang, couleur))
+    random.shuffle(nouveau_paquet)
+    return nouveau_paquet
 
-def tirer_carte(paquet):
-    element = paquet.pop()
-    return element
+def tirer_carte(p):
+    return p.pop()
 
 def calculer_score(main):
     total = 0
-    for carte in main:
-        rang = carte[0]
-        if rang == "J" or rang == "Q" or rang == "K":
-            total = total + 10
+    as_count = 0
+    for c in main:
+        rang = c[0]
+        if rang in ["J", "Q", "K"]:
+            total += 10
         elif rang == "A":
-            if total + 11 > 21:
-                total = total + 1
-        else :
-            total = total + int(rang)
+            as_count += 1
+            total += 11
+        else:
+            total += int(rang)
+    
+    while total > 21 and as_count > 0:
+        total -= 10
+        as_count -= 1
     return total
-
-def afficher_main(nom, main, cacher_premiere=False):
-    print(f"{nom} :")
-    if cacher_premiere:
-        print("Carte cachée")
-        for i in range(1, len(main)):
-            rang, couleur = main[i]
-            print(f"{rang} de {couleur}")
-    else:
-        for rang, couleur in main:
-            print(f"{rang} de {couleur}")
 
 def on_tirer():
     global partie_terminee, message
-
-    if partie_terminee:
-        return
-
+    if partie_terminee: return
+    
     main_joueur.append(tirer_carte(paquet))
-    score = calculer_score(main_joueur)
-
-    if score > 21:
+    if calculer_score(main_joueur) > 21:
         partie_terminee = True
         message = "Bust ! Le croupier gagne."
-    else:
-        message =  "tirer ou rester."
-
     rafraichir_ui()
 
 def on_rester():
     global partie_terminee, message
-
-    if partie_terminee:
-        return
+    if partie_terminee: return
     
-    tour_croupier(paquet, main_croupier)
-
-    partie_terminee = True
-    gagnant = determiner_gagnant(calculer_score(main_joueur), calculer_score(main_croupier))
-
-    if gagnant == "croupier":
-        message = "Bust ! Le croupier gagne."
-    elif gagnant == "joueur":
-        message = "Bravo vous avez gagner !"
-    elif gagnant == "egalité":
-        message = "egalite......."
-    
-    rafraichir_ui()
-
-    
-        
-def tour_croupier(paquet, main_croupier):
     while calculer_score(main_croupier) < 17:
         main_croupier.append(tirer_carte(paquet))
-
-def determiner_gagnant(score_joueur, score_croupier):
-    if score_croupier > 21:
-        return "joueur"
-    elif score_croupier > score_joueur:
-        return "croupier"
-    elif score_joueur > 21:
-        return "croupier"
-    elif score_croupier == score_joueur:
-        return "egalité"
-    elif score_joueur > score_croupier:
-        return "joueur"
     
-def jouer_manche():
-    global paquet, main_joueur, main_croupier, partie_terminee, message
-    main_joueur = []
-    main_croupier = []
-    partie_terminee = False
-
-    message = ""
-
-
-    paquet = creer_paquet()
-
-    main_croupier.append(tirer_carte(paquet))
-    main_joueur.append(tirer_carte(paquet))
-    main_croupier.append(tirer_carte(paquet))
-    main_joueur.append(tirer_carte(paquet))
-
-    message =  "tirer ou rester."
-
+    partie_terminee = True
+    s_joueur = calculer_score(main_joueur)
+    s_croupier = calculer_score(main_croupier)
+    
+    if s_croupier > 21 or s_joueur > s_croupier:
+        message = "Bravo, vous avez gagné !"
+    elif s_croupier > s_joueur:
+        message = "Le croupier gagne."
+    else:
+        message = "Égalité !"
     rafraichir_ui()
 
-def formater_main(main):
-    return " | ".join([f"{rang} de {couleur}" for rang, couleur in main])
+def jouer_manche():
+    global paquet, main_joueur, main_croupier, partie_terminee, message
+    paquet = creer_paquet()
+    main_joueur = [tirer_carte(paquet), tirer_carte(paquet)]
+    main_croupier = [tirer_carte(paquet), tirer_carte(paquet)]
+    partie_terminee = False
+    message = "Tirer ou Rester ?"
+    rafraichir_ui()
+
+# --- PARTIE GRAPHIQUE ---
+
+images_cartes = {}
+
+def charger_toutes_les_images():
+    """Charge les 52 images en mémoire une seule fois"""
+    for rang in carte:
+        for nom_long, initiale in couleurs_dict.items():
+            nom_fichier = f"images/{rang}{initiale}.gif"
+            try:
+                img = Image.open(nom_fichier)
+                images_cartes[f"{rang}_{nom_long}"] = ImageTk.PhotoImage(img)
+            except:
+                print(f"Erreur : Image {nom_fichier} introuvable.")
 
 def rafraichir_ui():
-    # Main + score joueur
-    texte_joueur = f"Joueur: {formater_main(main_joueur)}\nScore: {calculer_score(main_joueur)}"
-    label_mainjoueur.config(text=texte_joueur)
+    # Affichage Joueur
+    canvas_joueur.delete("all")
+    for i, c in enumerate(main_joueur):
+        cle = f"{c[0]}_{c[1]}"
+        canvas_joueur.create_image(50 + (i * 40), 60, image=images_cartes[cle])
+    label_mainjoueur.config(text=f"Score Joueur: {calculer_score(main_joueur)}")
 
-    # Main + score croupier (carte cachée si partie non finie)
-    if partie_terminee:
-        texte_croupier = f"Croupier: {formater_main(main_croupier)}\nScore: {calculer_score(main_croupier)}"
-    else:
-        if len(main_croupier) > 0:
-            visible = " | ".join([f"{r} de {c}" for r, c in main_croupier[1:]])
-            texte_croupier = f"Croupier: [Carte cachée]"
-            if visible:
-                texte_croupier += f" | {visible}"
+    # Affichage Croupier
+    canvas_croupier.delete("all")
+    for i, c in enumerate(main_croupier):
+        if i == 0 and not partie_terminee:
+            # Dessine un rectangle gris si la carte est cachée
+            canvas_croupier.create_rectangle(15, 10, 85, 110, fill="blue", outline="white")
+            canvas_croupier.create_text(50, 60, text="?", fill="white", font=("Arial", 20, "bold"))
         else:
-            texte_croupier = "Croupier: -"
-    label_maincroupier.config(text=texte_croupier)
-
-    # Message état
+            cle = f"{c[0]}_{c[1]}"
+            canvas_croupier.create_image(50 + (i * 40), 60, image=images_cartes[cle])
+    
+    score_c_txt = calculer_score(main_croupier) if partie_terminee else "?"
+    label_maincroupier.config(text=f"Score Croupier: {score_c_txt}")
     label_message.config(text=message)
 
-
-    # Activer/désactiver boutons
     etat = "disabled" if partie_terminee else "normal"
     bouton_tirer.config(state=etat)
     bouton_rester.config(state=etat)
 
-
-
-
-
-# Création de la fenêtre
 app = tk.Tk()
-app.title("BlackJack")
-app.geometry("600x600")
+app.title("BlackJack Deluxe")
+app.geometry("500x700")
+app.configure(bg="darkgreen")
 
-# Création des éléments
-titre = tk.Label(app, text="BlackJack", font=("Arial", 20))
-label_message= tk.Label(app, text="", font=("Arial", 24, "bold"))
-label_mainjoueur = tk.Label(app, text="", font=("Arial", 24, "bold"))
-label_maincroupier = tk.Label(app, text="", font=("Arial", 24, "bold"))
-bouton_manche = tk.Button(app, text="nouvelle manche", command=jouer_manche)
-bouton_tirer = tk.Button(app, text="tirer", command=on_tirer)
-bouton_rester = tk.Button(app, text="rester", command=on_rester)
+# Chargement des images dès le début
+charger_toutes_les_images()
 
-# Placement (Layout)
-titre.pack(pady=10)
-bouton_manche.pack(pady=10)
-label_message.pack(pady=10)
-label_maincroupier.pack(pady=10)
-label_mainjoueur.pack(pady=10)
-bouton_tirer.pack(pady=5)
-bouton_rester.pack(pady=10, padx=5)
+# Interface
+tk.Label(app, text="BLACKJACK", font=("Arial", 24, "bold"), bg="darkgreen", fg="gold").pack(pady=10)
 
-# Lancement
+tk.Label(app, text="Main du Croupier", bg="darkgreen", fg="white").pack()
+canvas_croupier = tk.Canvas(app, width=350, height=130, bg="forestgreen", highlightthickness=0)
+canvas_croupier.pack()
+label_maincroupier = tk.Label(app, text="", font=("Arial", 12), bg="darkgreen", fg="white")
+label_maincroupier.pack()
+
+tk.Label(app, text="Votre Main", bg="darkgreen", fg="white").pack(pady=(20, 0))
+canvas_joueur = tk.Canvas(app, width=350, height=130, bg="forestgreen", highlightthickness=0)
+canvas_joueur.pack()
+label_mainjoueur = tk.Label(app, text="", font=("Arial", 12), bg="darkgreen", fg="white")
+label_mainjoueur.pack()
+
+label_message = tk.Label(app, text=message, font=("Arial", 14, "italic"), bg="darkgreen", fg="white")
+label_message.pack(pady=20)
+
+# Boutons
+cadre_boutons = tk.Frame(app, bg="darkgreen")
+cadre_boutons.pack(pady=10)
+
+tk.Button(cadre_boutons, text="Nouvelle Manche", command=jouer_manche, width=15).grid(row=0, column=0, columnspan=2, pady=5)
+bouton_tirer = tk.Button(cadre_boutons, text="Tirer", command=on_tirer, width=7, state="disabled")
+bouton_tirer.grid(row=1, column=0, padx=5)
+bouton_rester = tk.Button(cadre_boutons, text="Rester", command=on_rester, width=7, state="disabled")
+bouton_rester.grid(row=1, column=1, padx=5)
+
+
+
+
 app.mainloop()
-
-
-
-
-
-
